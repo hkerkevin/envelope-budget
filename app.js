@@ -19,7 +19,7 @@ const DEFAULT_ENVELOPES = [
   { name: 'Groceries', budget: 700, color: '#34C759' },
   { name: 'Dining Out', budget: 550, color: '#FF9500' },
   { name: 'Coffee/Tea/Matcha', budget: 80, color: '#5AC8FA' },
-  { name: 'Household/Amazon', budget: 500, color: '#AF52DE' },,
+  { name: 'Household/Amazon', budget: 500, color: '#AF52DE' },
 ];
 
 const COLORS = [
