@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Envelopes">
+  <meta name="theme-color" content="#5856D6">
+  <title>Envelope Budget</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✉️</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ==================== SETUP ==================== -->
+    <div id="view-setup" class="view active">
+      <div class="setup-content">
+        <div class="setup-icon">✉️</div>
+        <h1 class="setup-title">Envelope Budget</h1>
+        <p class="setup-subtitle">Track spending together</p>
+        <div class="setup-form">
+          <input type="text" id="input-name" placeholder="Your name" autocomplete="off" maxlength="20">
+          <button id="btn-create" class="btn btn-primary">Create New Household</button>
+          <div class="divider"><span>or join existing</span></div>
+          <input type="text" id="input-code" placeholder="Enter household code" autocomplete="off" maxlength="6" style="text-transform:uppercase">
+          <button id="btn-join" class="btn btn-outline">Join Household</button>
+        </div>
+        <p class="setup-hint" id="setup-hint"></p>
+      </div>
+    </div>
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="view-dashboard" class="view">
+      <header class="app-header">
+        <div>
+          <h1 class="header-title">Envelopes</h1>
+          <span class="header-period" id="period-label"></span>
+        </div>
+        <button class="code-badge" id="household-code-btn" title="Copy share code"></button>
+      </header>
+      <div class="scroll-area">
+        <div class="overview-card">
+          <div class="overview-top">
+            <span class="overview-label">Total Remaining</span>
+            <span class="overview-amount" id="total-remaining">$0.00</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="total-bar"></div>
+          </div>
+          <div class="overview-bottom">
+            <span>Budget: <strong id="total-budget">$0</strong></span>
+            <span>Spent: <strong id="total-spent">$0</strong></span>
+          </div>
+        </div>
+        <div id="envelopes-container"></div>
+        <div class="spacer"></div>
+      </div>
+    </div>
+
+    <!-- ==================== HISTORY ==================== -->
+    <div id="view-history" class="view">
+      <header class="app-header">
+        <h1 class="header-title">History</h1>
+        <select id="history-filter" class="filter-select">
+          <option value="all">All Envelopes</option>
+        </select>
+      </header>
+      <div class="scroll-area">
+        <div id="history-list"></div>
+        <div class="spacer"></div>
+      </div>
+    </div>
+
+    <!-- ==================== SETTINGS ==================== -->
+    <div id="view-settings" class="view">
+      <header class="app-header">
+        <h1 class="header-title">Settings</h1>
+      </header>
+      <div class="scroll-area">
+        <section class="settings-section">
+          <h3 class="section-title">Household</h3>
+          <div class="settings-card">
+            <div class="setting-row">
+              <span class="setting-label">Share Code</span>
+              <span class="setting-value code-text" id="settings-code"></span>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">Members</span>
+              <span class="setting-value" id="settings-members"></span>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">Sync</span>
+              <span class="setting-value" id="settings-sync"></span>
+            </div>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 class="section-title">Envelopes</h3>
+          <div class="settings-card" id="envelope-settings-list"></div>
+          <button class="btn btn-outline btn-full" id="btn-add-envelope">+ Add Envelope</button>
+        </section>
+        <section class="settings-section">
+          <h3 class="section-title">Data</h3>
+          <div class="settings-card">
+            <button class="setting-row setting-btn danger" id="btn-reset-month">
+              <span>Reset Current Month</span>
+            </button>
+            <button class="setting-row setting-btn danger" id="btn-leave">
+              <span>Leave Household</span>
+            </button>
+          </div>
+        </section>
+        <div class="spacer"></div>
+      </div>
+    </div>
+
+    <!-- ==================== ADD TRANSACTION MODAL ==================== -->
+    <div id="modal-add" class="modal">
+      <div class="modal-overlay"></div>
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <button class="btn-text" id="btn-cancel-add">Cancel</button>
+          <h2 class="modal-title">Add Expense</h2>
+          <button class="btn-text primary" id="btn-save-add">Save</button>
+        </div>
+        <div class="modal-body">
+          <div class="amount-group">
+            <span class="amount-currency">$</span>
+            <input type="text" id="input-amount" inputmode="decimal" placeholder="0.00" autocomplete="off">
+          </div>
+          <label class="field-label">Envelope</label>
+          <div class="envelope-picker" id="envelope-picker"></div>
+          <label class="field-label">Note</label>
+          <input type="text" id="input-note" class="field-input" placeholder="Optional" autocomplete="off" maxlength="100">
+          <label class="field-label">Date</label>
+          <input type="date" id="input-date" class="field-input">
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ENVELOPE MODAL ==================== -->
+    <div id="modal-envelope" class="modal">
+      <div class="modal-overlay"></div>
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+          <button class="btn-text" id="btn-cancel-envelope">Cancel</button>
+          <h2 class="modal-title" id="envelope-modal-title">Add Envelope</h2>
+          <button class="btn-text primary" id="btn-save-envelope">Save</button>
+        </div>
+        <div class="modal-body">
+          <label class="field-label">Name</label>
+          <input type="text" id="input-envelope-name" class="field-input" placeholder="e.g. Groceries" autocomplete="off" maxlength="30">
+          <label class="field-label">Monthly Budget</label>
+          <div class="budget-group">
+            <span class="amount-currency small">$</span>
+            <input type="text" id="input-envelope-budget" class="field-input" inputmode="decimal" placeholder="0.00" autocomplete="off">
+          </div>
+          <label class="field-label">Color</label>
+          <div class="color-picker" id="color-picker"></div>
+          <button class="btn btn-danger btn-full" id="btn-delete-envelope" style="display:none">Delete Envelope</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== FAB ==================== -->
+    <button id="fab" class="fab hidden" aria-label="Add transaction">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+    </button>
+
+    <!-- ==================== BOTTOM NAV ==================== -->
+    <nav id="bottom-nav" class="hidden">
+      <button class="nav-btn active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="currentColor"/></svg>
+        <span>Budget</span>
+      </button>
+      <button class="nav-btn" data-view="history">
+        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>History</span>
+      </button>
+      <button class="nav-btn" data-view="settings">
+        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- ==================== TOAST ==================== -->
+    <div id="toast" class="toast"></div>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
