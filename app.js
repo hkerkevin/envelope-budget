@@ -7,12 +7,12 @@
 // Steps: Create project → Build → Firestore Database → Create → Start in test mode
 //        Then: Project Settings → Your apps → Web app → Copy config
 const FIREBASE_CONFIG = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyD3EU0Kr7ypDuqGmVO4mCYc_4RwvAppAsE',
+  authDomain: 'envelope-budget-c2b58.firebaseapp.com',
+  projectId: 'envelope-budget-c2b58',
+  storageBucket: 'envelope-budget-c2b58.firebasestorage.app',
+  messagingSenderId: '278247768167',
+  appId: '1:278247768167:web:b357b6a36e2618fa9e94c2',
 };
 
 const DEFAULT_ENVELOPES = [
