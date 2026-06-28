@@ -429,6 +429,11 @@ input, button, select {
   border-radius: var(--radius-sm);
   padding: 14px;
   margin-bottom: 2px;
+  cursor: pointer;
+}
+
+.history-item:active {
+  background: var(--bg);
 }
 
 .history-item:first-of-type {

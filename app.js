@@ -44,6 +44,7 @@ let db = null;
 let useFirebase = false;
 let unsubscribers = [];
 let editingEnvelopeId = null;
+let editingTransactionId = null;
 let selectedEnvelopeId = null;
 let selectedColor = COLORS[0];
 
@@ -228,6 +229,17 @@ async function addTransactionData(envelopeId, amount, note, date) {
     renderAll();
   }
   return true;
+}
+
+async function updateTransactionData(id, updates) {
+  if (useFirebase) {
+    await db.collection('households').doc(state.householdId).collection('transactions').doc(id).update(updates);
+  } else {
+    const txn = state.transactions.find(t => t.id === id);
+    if (txn) Object.assign(txn, updates);
+    saveLocal();
+    renderAll();
+  }
 }
 
 async function deleteTransactionData(id) {
@@ -493,6 +505,7 @@ function renderHistory() {
         </div>
         <button class="history-delete" data-id="${t.id}">Delete</button>
       `;
+      row.addEventListener('click', () => showEditTransaction(t));
       group.appendChild(row);
     });
 
@@ -556,10 +569,24 @@ function hideModal(id) {
 }
 
 function showAddTransaction(preselectedEnvelopeId) {
+  editingTransactionId = null;
+  $('add-modal-title').textContent = 'Add Expense';
   $('input-amount').value = '';
   $('input-note').value = '';
   $('input-date').value = new Date().toISOString().split('T')[0];
   selectedEnvelopeId = preselectedEnvelopeId || (state.envelopes[0]?.id || null);
+  renderEnvelopePicker();
+  showModal('modal-add');
+  setTimeout(() => $('input-amount').focus(), 300);
+}
+
+function showEditTransaction(txn) {
+  editingTransactionId = txn.id;
+  $('add-modal-title').textContent = 'Edit Expense';
+  $('input-amount').value = txn.amount.toFixed(2);
+  $('input-note').value = txn.note || '';
+  $('input-date').value = txn.date || new Date().toISOString().split('T')[0];
+  selectedEnvelopeId = txn.envelopeId;
   renderEnvelopePicker();
   showModal('modal-add');
   setTimeout(() => $('input-amount').focus(), 300);
@@ -593,10 +620,21 @@ async function saveTransaction() {
   if (!selectedEnvelopeId) { toast('Select an envelope'); return; }
   if (!parseAmount(amount)) { toast('Enter an amount'); return; }
 
-  const ok = await addTransactionData(selectedEnvelopeId, amount, note, date);
-  if (ok) {
+  if (editingTransactionId) {
+    await updateTransactionData(editingTransactionId, {
+      envelopeId: selectedEnvelopeId,
+      amount: parseAmount(amount),
+      note,
+      date,
+    });
     hideModal('modal-add');
-    toast('Added');
+    toast('Updated');
+  } else {
+    const ok = await addTransactionData(selectedEnvelopeId, amount, note, date);
+    if (ok) {
+      hideModal('modal-add');
+      toast('Added');
+    }
   }
 }
 
