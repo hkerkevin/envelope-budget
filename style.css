@@ -566,6 +566,10 @@ input, button, select {
   border-bottom: none;
 }
 
+.setting-btn:not(.danger) span {
+  color: var(--primary);
+}
+
 .setting-btn.danger span {
   color: var(--red);
 }

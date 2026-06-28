@@ -103,7 +103,29 @@
           <button class="btn btn-outline btn-full" id="btn-add-envelope">+ Add Envelope</button>
         </section>
         <section class="settings-section">
-          <h3 class="section-title">Data</h3>
+          <h3 class="section-title">Export & Import</h3>
+          <div class="settings-card">
+            <button class="setting-row setting-btn" id="btn-export-month">
+              <span>Export Current Month (CSV)</span>
+            </button>
+            <button class="setting-row setting-btn" id="btn-export-all">
+              <span>Export All Months (CSV)</span>
+            </button>
+            <button class="setting-row setting-btn" id="btn-export-envelopes">
+              <span>Export Envelope Setup (JSON)</span>
+            </button>
+            <button class="setting-row setting-btn" id="btn-import-transactions">
+              <span>Import Transactions (CSV)</span>
+            </button>
+            <button class="setting-row setting-btn" id="btn-import-envelopes">
+              <span>Import Envelope Setup (JSON)</span>
+            </button>
+          </div>
+          <input type="file" id="file-import-transactions" accept=".csv" class="hidden">
+          <input type="file" id="file-import-envelopes" accept=".json" class="hidden">
+        </section>
+        <section class="settings-section">
+          <h3 class="section-title">Danger Zone</h3>
           <div class="settings-card">
             <button class="setting-row setting-btn danger" id="btn-reset-month">
               <span>Reset Current Month</span>
