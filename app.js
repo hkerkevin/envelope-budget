@@ -397,7 +397,6 @@ function renderDashboard() {
   $('household-code-btn').textContent = state.householdCode || '';
 
   let monthlyBudget = 0, monthlySpent = 0;
-  let annualBudget = 0, annualSpent = 0;
   const container = $('envelopes-container');
   container.innerHTML = '';
 
@@ -408,7 +407,6 @@ function renderDashboard() {
     $('total-budget').textContent = '$0';
     $('total-spent').textContent = '$0';
     $('total-bar').style.width = '0%';
-    $('annual-overview').classList.add('hidden');
     return;
   }
 
@@ -418,10 +416,7 @@ function renderDashboard() {
     const pct = env.budget > 0 ? Math.min((spent / env.budget) * 100, 100) : 0;
     const isAnnual = env.type === 'annual';
 
-    if (isAnnual) {
-      annualBudget += env.budget;
-      annualSpent += spent;
-    } else {
+    if (!isAnnual) {
       monthlyBudget += env.budget;
       monthlySpent += spent;
     }
@@ -462,22 +457,6 @@ function renderDashboard() {
   $('total-remaining').className = 'overview-amount' + (monthlyRemaining < 0 ? ' negative' : '');
   $('total-budget').textContent = formatCurrency(monthlyBudget);
   $('total-spent').textContent = formatCurrency(monthlySpent);
-
-  const annualOverview = $('annual-overview');
-  if (annualBudget > 0) {
-    const annualRemaining = annualBudget - annualSpent;
-    const annualPct = Math.min((annualSpent / annualBudget) * 100, 100);
-    annualOverview.classList.remove('hidden');
-    $('annual-remaining').textContent = (annualRemaining < 0 ? '-' : '') + formatCurrency(annualRemaining);
-    $('annual-remaining').className = 'overview-amount' + (annualRemaining < 0 ? ' negative' : '');
-    $('annual-budget').textContent = formatCurrency(annualBudget);
-    $('annual-spent').textContent = formatCurrency(annualSpent);
-    const annualBar = $('annual-bar');
-    annualBar.style.width = annualPct + '%';
-    annualBar.style.background = annualPct > 90 ? '#FF3B30' : annualPct > 75 ? '#FF9500' : '#5856D6';
-  } else {
-    annualOverview.classList.add('hidden');
-  }
 
   const bar = $('total-bar');
   bar.style.width = monthlyPct + '%';
