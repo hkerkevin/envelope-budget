@@ -44,7 +44,7 @@
       <div class="scroll-area">
         <div class="overview-card">
           <div class="overview-top">
-            <span class="overview-label">Total Remaining</span>
+            <span class="overview-label">Monthly Remaining</span>
             <span class="overview-amount" id="total-remaining">$0.00</span>
           </div>
           <div class="progress-bar">
@@ -53,6 +53,19 @@
           <div class="overview-bottom">
             <span>Budget: <strong id="total-budget">$0</strong></span>
             <span>Spent: <strong id="total-spent">$0</strong></span>
+          </div>
+        </div>
+        <div class="overview-card hidden" id="annual-overview">
+          <div class="overview-top">
+            <span class="overview-label">Annual Remaining</span>
+            <span class="overview-amount" id="annual-remaining">$0.00</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="annual-bar"></div>
+          </div>
+          <div class="overview-bottom">
+            <span>Budget: <strong id="annual-budget">$0</strong></span>
+            <span>Spent: <strong id="annual-spent">$0</strong></span>
           </div>
         </div>
         <div id="envelopes-container"></div>

@@ -396,7 +396,8 @@ function renderDashboard() {
   $('period-label').textContent = getPeriodLabel(getCurrentPeriod());
   $('household-code-btn').textContent = state.householdCode || '';
 
-  let totalBudget = 0, totalSpent = 0;
+  let monthlyBudget = 0, monthlySpent = 0;
+  let annualBudget = 0, annualSpent = 0;
   const container = $('envelopes-container');
   container.innerHTML = '';
 
@@ -407,6 +408,7 @@ function renderDashboard() {
     $('total-budget').textContent = '$0';
     $('total-spent').textContent = '$0';
     $('total-bar').style.width = '0%';
+    $('annual-overview').classList.add('hidden');
     return;
   }
 
@@ -414,8 +416,15 @@ function renderDashboard() {
     const spent = getSpent(env.id);
     const remaining = env.budget - spent;
     const pct = env.budget > 0 ? Math.min((spent / env.budget) * 100, 100) : 0;
-    totalBudget += env.budget;
-    totalSpent += spent;
+    const isAnnual = env.type === 'annual';
+
+    if (isAnnual) {
+      annualBudget += env.budget;
+      annualSpent += spent;
+    } else {
+      monthlyBudget += env.budget;
+      monthlySpent += spent;
+    }
 
     const barColor = pct > 90 ? '#FF3B30' : pct > 75 ? '#FF9500' : env.color;
 
@@ -427,7 +436,6 @@ function renderDashboard() {
       renderHistory();
     });
 
-    const isAnnual = env.type === 'annual';
     const leftLabel = remaining < 0 ? 'over' : isAnnual ? 'left this year' : 'left';
 
     card.innerHTML = `
@@ -447,17 +455,33 @@ function renderDashboard() {
     container.appendChild(card);
   });
 
-  const totalRemaining = totalBudget - totalSpent;
-  const totalPct = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
+  const monthlyRemaining = monthlyBudget - monthlySpent;
+  const monthlyPct = monthlyBudget > 0 ? Math.min((monthlySpent / monthlyBudget) * 100, 100) : 0;
 
-  $('total-remaining').textContent = (totalRemaining < 0 ? '-' : '') + formatCurrency(totalRemaining);
-  $('total-remaining').className = 'overview-amount' + (totalRemaining < 0 ? ' negative' : '');
-  $('total-budget').textContent = formatCurrency(totalBudget);
-  $('total-spent').textContent = formatCurrency(totalSpent);
+  $('total-remaining').textContent = (monthlyRemaining < 0 ? '-' : '') + formatCurrency(monthlyRemaining);
+  $('total-remaining').className = 'overview-amount' + (monthlyRemaining < 0 ? ' negative' : '');
+  $('total-budget').textContent = formatCurrency(monthlyBudget);
+  $('total-spent').textContent = formatCurrency(monthlySpent);
+
+  const annualOverview = $('annual-overview');
+  if (annualBudget > 0) {
+    const annualRemaining = annualBudget - annualSpent;
+    const annualPct = Math.min((annualSpent / annualBudget) * 100, 100);
+    annualOverview.classList.remove('hidden');
+    $('annual-remaining').textContent = (annualRemaining < 0 ? '-' : '') + formatCurrency(annualRemaining);
+    $('annual-remaining').className = 'overview-amount' + (annualRemaining < 0 ? ' negative' : '');
+    $('annual-budget').textContent = formatCurrency(annualBudget);
+    $('annual-spent').textContent = formatCurrency(annualSpent);
+    const annualBar = $('annual-bar');
+    annualBar.style.width = annualPct + '%';
+    annualBar.style.background = annualPct > 90 ? '#FF3B30' : annualPct > 75 ? '#FF9500' : '#5856D6';
+  } else {
+    annualOverview.classList.add('hidden');
+  }
 
   const bar = $('total-bar');
-  bar.style.width = totalPct + '%';
-  bar.style.background = totalPct > 90 ? '#FF3B30' : totalPct > 75 ? '#FF9500' : '#5856D6';
+  bar.style.width = monthlyPct + '%';
+  bar.style.background = monthlyPct > 90 ? '#FF3B30' : monthlyPct > 75 ? '#FF9500' : '#5856D6';
 }
 
 // ============================================
