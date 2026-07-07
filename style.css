@@ -391,6 +391,17 @@ input, button, select {
   color: var(--text-secondary);
 }
 
+.envelope-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--primary);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px 20px;

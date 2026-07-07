@@ -47,6 +47,7 @@ let editingEnvelopeId = null;
 let editingTransactionId = null;
 let selectedEnvelopeId = null;
 let selectedColor = COLORS[0];
+let selectedEnvelopeType = 'monthly';
 
 // ============================================
 // UTILITIES
@@ -252,8 +253,8 @@ async function deleteTransactionData(id) {
   }
 }
 
-async function addEnvelopeData(name, budget, color) {
-  const env = { name, budget: parseAmount(budget), color, order: state.envelopes.length };
+async function addEnvelopeData(name, budget, color, type) {
+  const env = { name, budget: parseAmount(budget), color, order: state.envelopes.length, type: type || 'monthly' };
 
   if (useFirebase) {
     await db.collection('households').doc(state.householdId).collection('envelopes').add(env);
@@ -373,7 +374,18 @@ function setupListeners() {
 // ============================================
 // UI: DASHBOARD
 // ============================================
+function getCurrentYear() {
+  return String(new Date().getFullYear());
+}
+
 function getSpent(envelopeId) {
+  const env = state.envelopes.find(e => e.id === envelopeId);
+  if (env?.type === 'annual') {
+    const year = getCurrentYear();
+    return state.transactions
+      .filter(t => t.envelopeId === envelopeId && (t.period || '').startsWith(year))
+      .reduce((s, t) => s + t.amount, 0);
+  }
   const period = getCurrentPeriod();
   return state.transactions
     .filter(t => t.envelopeId === envelopeId && t.period === period)
@@ -415,18 +427,21 @@ function renderDashboard() {
       renderHistory();
     });
 
+    const isAnnual = env.type === 'annual';
+    const leftLabel = remaining < 0 ? 'over' : isAnnual ? 'left this year' : 'left';
+
     card.innerHTML = `
       <div class="envelope-header">
-        <div class="envelope-name" style="color:${env.color}">${esc(env.name)}</div>
+        <div class="envelope-name" style="color:${env.color}">${esc(env.name)}${isAnnual ? ' <span class="envelope-badge">Annual</span>' : ''}</div>
         <div class="envelope-remaining ${remaining < 0 ? 'negative' : ''}">
-          ${remaining < 0 ? '-' : ''}${formatCurrency(remaining)} ${remaining < 0 ? 'over' : 'left'}
+          ${remaining < 0 ? '-' : ''}${formatCurrency(remaining)} ${leftLabel}
         </div>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
       </div>
       <div class="envelope-detail">
-        ${formatCurrency(spent)} of ${formatCurrency(env.budget)}
+        ${formatCurrency(spent)} of ${formatCurrency(env.budget)}${isAnnual ? ' (year)' : ''}
       </div>
     `;
     container.appendChild(card);
@@ -464,7 +479,13 @@ function renderHistory() {
   if (!filter.value) filter.value = 'all';
 
   const period = getCurrentPeriod();
-  let txns = state.transactions.filter(t => t.period === period);
+  const year = getCurrentYear();
+  const filterEnv = filter.value !== 'all' ? state.envelopes.find(e => e.id === filter.value) : null;
+  const showYear = filterEnv?.type === 'annual';
+
+  let txns = showYear
+    ? state.transactions.filter(t => (t.period || '').startsWith(year))
+    : state.transactions.filter(t => t.period === period);
   if (filter.value !== 'all') txns = txns.filter(t => t.envelopeId === filter.value);
 
   txns.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || '').localeCompare(a.createdAt || ''));
@@ -644,10 +665,33 @@ function showEnvelopeModal(env) {
   $('input-envelope-name').value = env?.name || '';
   $('input-envelope-budget').value = env?.budget || '';
   selectedColor = env?.color || COLORS[0];
+  selectedEnvelopeType = env?.type || 'monthly';
   $('btn-delete-envelope').style.display = env ? 'block' : 'none';
+  $('budget-label').textContent = selectedEnvelopeType === 'annual' ? 'Annual Budget' : 'Monthly Budget';
 
   renderColorPicker();
+  renderTypePicker();
   showModal('modal-envelope');
+}
+
+function renderTypePicker() {
+  const picker = $('type-picker');
+  picker.innerHTML = '';
+  [{ key: 'monthly', label: 'Monthly' }, { key: 'annual', label: 'Annual' }].forEach(opt => {
+    const chip = document.createElement('button');
+    chip.className = 'picker-chip' + (selectedEnvelopeType === opt.key ? ' selected' : '');
+    chip.textContent = opt.label;
+    if (selectedEnvelopeType === opt.key) {
+      chip.style.background = 'var(--primary)';
+      chip.style.borderColor = 'var(--primary)';
+    }
+    chip.addEventListener('click', () => {
+      selectedEnvelopeType = opt.key;
+      $('budget-label').textContent = opt.key === 'annual' ? 'Annual Budget' : 'Monthly Budget';
+      renderTypePicker();
+    });
+    picker.appendChild(chip);
+  });
 }
 
 function renderColorPicker() {
@@ -673,9 +717,9 @@ async function saveEnvelope() {
   if (!parseAmount(budget)) { toast('Enter a budget'); return; }
 
   if (editingEnvelopeId) {
-    await updateEnvelopeData(editingEnvelopeId, { name, budget: parseAmount(budget), color: selectedColor });
+    await updateEnvelopeData(editingEnvelopeId, { name, budget: parseAmount(budget), color: selectedColor, type: selectedEnvelopeType });
   } else {
-    await addEnvelopeData(name, budget, selectedColor);
+    await addEnvelopeData(name, budget, selectedColor, selectedEnvelopeType);
   }
 
   hideModal('modal-envelope');
@@ -754,6 +798,7 @@ function exportEnvelopesJSON() {
     budget: e.budget,
     color: e.color,
     order: e.order,
+    type: e.type || 'monthly',
   }));
   downloadFile(JSON.stringify(data, null, 2), 'envelope-config.json', 'application/json');
   toast('Exported ' + data.length + ' envelopes');
@@ -873,10 +918,11 @@ async function importEnvelopesJSON(file) {
       await updateEnvelopeData(match.id, {
         budget: parseAmount(item.budget),
         color: item.color || match.color,
+        type: item.type || match.type || 'monthly',
       });
       updated++;
     } else {
-      await addEnvelopeData(item.name, item.budget, item.color || COLORS[added % COLORS.length]);
+      await addEnvelopeData(item.name, item.budget, item.color || COLORS[added % COLORS.length], item.type || 'monthly');
       added++;
     }
   }
