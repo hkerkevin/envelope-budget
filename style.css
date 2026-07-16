@@ -599,6 +599,22 @@ input, button, select {
   border-bottom: none;
 }
 
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.member-remove {
+  background: none;
+  border: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
 .setting-btn:not(.danger) span {
   color: var(--primary);
 }

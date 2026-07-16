@@ -551,7 +551,33 @@ function renderHistory() {
 function renderSettings() {
   $('settings-email').textContent = state.user?.email || '-';
   $('settings-code').textContent = state.householdCode || '-';
-  $('settings-members').textContent = Object.values(state.members).join(', ') || state.user?.name || '-';
+
+  const membersList = $('settings-members-list');
+  membersList.innerHTML = '';
+  Object.entries(state.members).forEach(([uid, name]) => {
+    const row = document.createElement('div');
+    row.className = 'setting-row member-row';
+    const isMe = uid === state.user?.uid;
+    row.innerHTML = `
+      <span class="setting-label">${esc(name)}${isMe ? ' (you)' : ''}</span>
+      ${isMe ? '' : '<button class="member-remove">Remove</button>'}
+    `;
+    if (!isMe) {
+      row.querySelector('.member-remove').addEventListener('click', async () => {
+        if (!confirm(`Remove ${name} from this household?`)) return;
+        if (useFirebase) {
+          await db.collection('households').doc(state.householdId).update({
+            [`members.${uid}`]: firebase.firestore.FieldValue.delete(),
+          });
+        } else {
+          delete state.members[uid];
+          saveLocal();
+          renderSettings();
+        }
+      });
+    }
+    membersList.appendChild(row);
+  });
 
   const list = $('envelope-settings-list');
   list.innerHTML = '';
