@@ -1091,7 +1091,16 @@ async function init() {
   if (hasLocal && state.householdId) {
     if (useFirebase) {
       try {
-        await firebase.auth().signInAnonymously();
+        const cred = await firebase.auth().signInAnonymously();
+        const uid = cred.user.uid;
+        if (uid !== state.user.uid) {
+          await db.collection('households').doc(state.householdId).update({
+            [`members.${uid}`]: state.user.name,
+          });
+          state.user.uid = uid;
+          state.members[uid] = state.user.name;
+          saveLocal();
+        }
       } catch {
         // offline — use cached data
       }
