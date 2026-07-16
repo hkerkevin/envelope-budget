@@ -15,20 +15,38 @@
 <body>
   <div id="app">
 
-    <!-- ==================== SETUP ==================== -->
-    <div id="view-setup" class="view active">
+    <!-- ==================== AUTH ==================== -->
+    <div id="view-auth" class="view active">
       <div class="setup-content">
         <div class="setup-icon">✉️</div>
         <h1 class="setup-title">Envelope Budget</h1>
         <p class="setup-subtitle">Track spending together</p>
         <div class="setup-form">
-          <input type="text" id="input-name" placeholder="Your name" autocomplete="off" maxlength="20">
+          <input type="text" id="input-auth-name" placeholder="Your name" autocomplete="name" maxlength="20">
+          <input type="email" id="input-auth-email" placeholder="Email" autocomplete="email">
+          <input type="password" id="input-auth-password" placeholder="Password" autocomplete="current-password">
+          <button id="btn-auth-submit" class="btn btn-primary">Create Account</button>
+          <p class="auth-toggle">
+            <span id="auth-toggle-prompt">Already have an account?</span>
+            <button type="button" class="btn-link" id="btn-auth-toggle">Log in</button>
+          </p>
+        </div>
+        <p class="setup-hint" id="auth-error"></p>
+      </div>
+    </div>
+
+    <!-- ==================== SETUP ==================== -->
+    <div id="view-setup" class="view">
+      <div class="setup-content">
+        <div class="setup-icon">✉️</div>
+        <h1 class="setup-title" id="setup-greeting">Set Up Household</h1>
+        <p class="setup-subtitle">Create or join a household to get started</p>
+        <div class="setup-form">
           <button id="btn-create" class="btn btn-primary">Create New Household</button>
           <div class="divider"><span>or join existing</span></div>
           <input type="text" id="input-code" placeholder="Enter household code" autocomplete="off" maxlength="6" style="text-transform:uppercase">
           <button id="btn-join" class="btn btn-outline">Join Household</button>
         </div>
-        <p class="setup-hint" id="setup-hint"></p>
       </div>
     </div>
 
@@ -84,16 +102,16 @@
           <h3 class="section-title">Household</h3>
           <div class="settings-card">
             <div class="setting-row">
+              <span class="setting-label">Account</span>
+              <span class="setting-value" id="settings-email"></span>
+            </div>
+            <div class="setting-row">
               <span class="setting-label">Share Code</span>
               <span class="setting-value code-text" id="settings-code"></span>
             </div>
             <div class="setting-row">
               <span class="setting-label">Members</span>
               <span class="setting-value" id="settings-members"></span>
-            </div>
-            <div class="setting-row">
-              <span class="setting-label">Sync</span>
-              <span class="setting-value" id="settings-sync"></span>
             </div>
           </div>
         </section>
@@ -132,6 +150,9 @@
             </button>
             <button class="setting-row setting-btn danger" id="btn-leave">
               <span>Leave Household</span>
+            </button>
+            <button class="setting-row setting-btn danger" id="btn-signout">
+              <span>Sign Out</span>
             </button>
           </div>
         </section>

@@ -143,12 +143,12 @@ function initFirebase() {
 // ============================================
 // DATA OPERATIONS
 // ============================================
-async function createHousehold(userName) {
+async function createHousehold() {
   const code = generateCode();
 
   if (useFirebase) {
-    const cred = await firebase.auth().signInAnonymously();
-    const uid = cred.user.uid;
+    const uid = state.user.uid;
+    const userName = state.user.name;
     const ref = await db.collection('households').add({
       code,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -156,7 +156,6 @@ async function createHousehold(userName) {
     });
     state.householdId = ref.id;
     state.householdCode = code;
-    state.user = { name: userName, uid };
     state.members = { [uid]: userName };
 
     for (let i = 0; i < DEFAULT_ENVELOPES.length; i++) {
@@ -168,8 +167,8 @@ async function createHousehold(userName) {
   } else {
     state.householdId = 'local_' + Date.now();
     state.householdCode = code;
-    state.user = { name: userName, uid: 'local' };
-    state.members = { local: userName };
+    state.user = state.user || { name: 'User', uid: 'local' };
+    state.members = { local: state.user.name };
     state.envelopes = DEFAULT_ENVELOPES.map((e, i) => ({ ...e, id: 'env_' + i, order: i }));
     state.transactions = [];
   }
@@ -177,9 +176,9 @@ async function createHousehold(userName) {
   saveLocal();
 }
 
-async function joinHousehold(code, userName) {
+async function joinHousehold(code) {
   if (!useFirebase) {
-    toast('Firebase required for joining. Configure it first.');
+    toast('Firebase required for joining.');
     return false;
   }
 
@@ -189,15 +188,14 @@ async function joinHousehold(code, userName) {
     return false;
   }
 
-  const cred = await firebase.auth().signInAnonymously();
-  const uid = cred.user.uid;
+  const uid = state.user.uid;
+  const userName = state.user.name;
   const doc = snap.docs[0];
 
   await doc.ref.update({ [`members.${uid}`]: userName });
 
   state.householdId = doc.id;
   state.householdCode = code.toUpperCase();
-  state.user = { name: userName, uid };
   state.members = { ...doc.data().members, [uid]: userName };
 
   saveLocal();
@@ -551,9 +549,9 @@ function renderHistory() {
 // UI: SETTINGS
 // ============================================
 function renderSettings() {
+  $('settings-email').textContent = state.user?.email || '-';
   $('settings-code').textContent = state.householdCode || '-';
   $('settings-members').textContent = Object.values(state.members).join(', ') || state.user?.name || '-';
-  $('settings-sync').textContent = useFirebase ? 'Real-time (Firebase)' : 'Local only';
 
   const list = $('envelope-settings-list');
   list.innerHTML = '';
@@ -946,13 +944,51 @@ function esc(str) {
 // EVENT BINDING
 // ============================================
 function bindEvents() {
-  // Setup
+  // Auth
+  let authMode = 'register';
+
+  $('btn-auth-toggle').addEventListener('click', () => {
+    authMode = authMode === 'register' ? 'login' : 'register';
+    $('input-auth-name').style.display = authMode === 'register' ? '' : 'none';
+    $('btn-auth-submit').textContent = authMode === 'register' ? 'Create Account' : 'Log In';
+    $('auth-toggle-prompt').textContent = authMode === 'register' ? 'Already have an account?' : 'Need an account?';
+    $('btn-auth-toggle').textContent = authMode === 'register' ? 'Log in' : 'Create one';
+    $('auth-error').textContent = '';
+  });
+
+  $('btn-auth-submit').addEventListener('click', async () => {
+    const email = $('input-auth-email').value.trim();
+    const password = $('input-auth-password').value;
+    const name = $('input-auth-name').value.trim();
+
+    if (authMode === 'register' && !name) { toast('Enter your name'); return; }
+    if (!email) { toast('Enter your email'); return; }
+    if (!password || password.length < 6) { toast('Password must be at least 6 characters'); return; }
+
+    $('btn-auth-submit').disabled = true;
+    $('auth-error').textContent = '';
+
+    try {
+      if (authMode === 'register') {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        await cred.user.updateProfile({ displayName: name });
+      } else {
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+      }
+    } catch (e) {
+      $('auth-error').textContent = e.message.replace('Firebase: ', '').replace(/\(auth\/.*\)\.?/, '').trim() || 'Authentication failed';
+    }
+    $('btn-auth-submit').disabled = false;
+  });
+
+  $('input-auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-auth-submit').click(); });
+  $('input-auth-email').addEventListener('keydown', e => { if (e.key === 'Enter') $('input-auth-password').focus(); });
+
+  // Setup (household create/join)
   $('btn-create').addEventListener('click', async () => {
-    const name = $('input-name').value.trim();
-    if (!name) { toast('Enter your name'); return; }
     $('btn-create').disabled = true;
     try {
-      await createHousehold(name);
+      await createHousehold();
       enterApp();
     } catch (e) {
       toast('Error: ' + e.message);
@@ -961,13 +997,11 @@ function bindEvents() {
   });
 
   $('btn-join').addEventListener('click', async () => {
-    const name = $('input-name').value.trim();
     const code = $('input-code').value.trim();
-    if (!name) { toast('Enter your name'); return; }
     if (!code) { toast('Enter a household code'); return; }
     $('btn-join').disabled = true;
     try {
-      const ok = await joinHousehold(code, name);
+      const ok = await joinHousehold(code);
       if (ok) enterApp();
     } catch (e) {
       toast('Error: ' + e.message);
@@ -1035,13 +1069,28 @@ function bindEvents() {
   });
 
   $('btn-leave').addEventListener('click', () => {
-    if (!confirm('Leave this household? Your local data will be cleared.')) return;
-    leaveHouseholdData();
+    if (!confirm('Leave this household? You can rejoin with the code.')) return;
+    unsubscribers.forEach(fn => fn());
+    unsubscribers = [];
+    state.householdId = null;
+    state.householdCode = null;
+    state.members = {};
+    state.envelopes = [];
+    state.transactions = [];
+    saveLocal();
     $('bottom-nav').classList.add('hidden');
     $('fab').classList.add('hidden');
-    navigate('setup');
-    $('input-name').value = '';
     $('input-code').value = '';
+    navigate('setup');
+  });
+
+  $('btn-signout').addEventListener('click', async () => {
+    if (!confirm('Sign out?')) return;
+    leaveHouseholdData();
+    if (useFirebase) await firebase.auth().signOut();
+    $('bottom-nav').classList.add('hidden');
+    $('fab').classList.add('hidden');
+    navigate('auth');
   });
 
   // Copy household code
@@ -1056,7 +1105,6 @@ function bindEvents() {
 
   // Enter key on inputs
   $('input-amount').addEventListener('keydown', e => { if (e.key === 'Enter') saveTransaction(); });
-  $('input-name').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-create').click(); });
   $('input-code').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-join').click(); });
 }
 
@@ -1074,43 +1122,52 @@ function enterApp() {
 // ============================================
 // INIT
 // ============================================
-async function init() {
-  // Register service worker
+function handleAuthState(user) {
+  if (!user) {
+    $('bottom-nav').classList.add('hidden');
+    $('fab').classList.add('hidden');
+    navigate('auth');
+    return;
+  }
+
+  state.user = {
+    name: user.displayName || user.email.split('@')[0],
+    uid: user.uid,
+    email: user.email,
+  };
+
+  if (state.householdId && state.members[user.uid]) {
+    saveLocal();
+    enterApp();
+  } else if (state.householdId) {
+    state.householdId = null;
+    state.householdCode = null;
+    state.members = {};
+    state.envelopes = [];
+    state.transactions = [];
+    saveLocal();
+    navigate('setup');
+  } else {
+    saveLocal();
+    navigate('setup');
+  }
+}
+
+function init() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
   useFirebase = initFirebase();
-  const hasLocal = loadLocal();
-
-  // Show sync status hint on setup
-  $('setup-hint').textContent = useFirebase
-    ? 'Sync enabled — data shared across devices'
-    : 'Running in local mode. Add Firebase config for sync.';
-
-  if (hasLocal && state.householdId) {
-    if (useFirebase) {
-      try {
-        const cred = await firebase.auth().signInAnonymously();
-        const uid = cred.user.uid;
-        if (uid !== state.user.uid) {
-          await db.collection('households').doc(state.householdId).update({
-            [`members.${uid}`]: state.user.name,
-          });
-          state.user.uid = uid;
-          state.members[uid] = state.user.name;
-          saveLocal();
-        }
-      } catch {
-        // offline — use cached data
-      }
-    }
-    enterApp();
-  } else {
-    navigate('setup');
-  }
-
+  loadLocal();
   bindEvents();
+
+  if (useFirebase) {
+    firebase.auth().onAuthStateChanged(handleAuthState);
+  } else {
+    if (state.householdId) enterApp();
+    else navigate('auth');
+  }
 }
 
 init();

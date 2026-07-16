@@ -229,6 +229,23 @@ input, button, select {
   text-align: center;
 }
 
+.auth-toggle {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
 /* ============================================
    BUTTONS
    ============================================ */
